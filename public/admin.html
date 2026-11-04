@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — My Mehngai Index</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">🏠 My Mehngai Index <span class="urdu">میری مہنگائی انڈیکس</span></div>
+  <nav><a href="/">Home</a></nav>
+</header>
+<section class="section">
+  <h2>Admin — enter a new SPI week</h2>
+  <p class="note">PBS publishes the weekly SPI every Friday (for the week ending Thursday) as a PDF on pbs.gov.pk — there is no official PBS API. Open the official executive-summary PDF, read the combined SPI and the item prices, and enter them here. Re-posting the same week <strong>replaces</strong> it; it never creates a duplicate week.</p>
+  <div class="form-row">
+    <label>Admin code <input id="code" type="password"></label>
+    <label>Week ended (YYYY-MM-DD) <input id="week" type="date"></label>
+    <label>Combined SPI <input id="spi" type="number" step="any"></label>
+    <label>Week change % <input id="wow" type="number" step="any"></label>
+    <label>Year change % <input id="yoy" type="number" step="any"></label>
+  </div>
+  <h3>Spending groups (optional — one per line: label, band, spi, week %, year %)</h3>
+  <textarea id="quintiles" rows="6" placeholder="Q1, Up to Rs 17,732, 357.92, -0.07, 8.07&#10;Q2, Rs 17,733 – 22,888, 360.81, -0.25, 9.92"></textarea>
+  <h3>Item prices — one per line: name, unit, price now, price last week, price last year</h3>
+  <textarea id="items" rows="12" placeholder="Tomatoes, 1 kg, 125.70, 93.17, 174.55&#10;Wheat Flour Bag, 20 kg, 2951.46, 2976.12, 2188.42"></textarea>
+  <p class="note">Tip: copy the item table from the PDF's price annex. Prices are national averages. Leave a price blank if the release does not give it — that item will simply show no value for that date.</p>
+  <button id="submitBtn" class="btn">Save this week</button>
+  <p id="result" class="note"></p>
+</section>
+<script src="/admin.js"></script>
+</body>
+</html>
