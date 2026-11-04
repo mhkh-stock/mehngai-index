@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Mehngai Index — Aapki Apni Mehngai | Your Personal Inflation</title>
+<meta name="description" content="My Mehngai Index: enter your own household basket and see YOUR inflation rate, plus Pakistan's official weekly SPI prices from PBS.">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">🏠 My Mehngai Index <span class="urdu">میری مہنگائی انڈیکس</span></div>
+  <nav><a href="#basket">My basket</a><a href="#spi">PBS SPI</a><a href="/admin.html">Admin</a></nav>
+</header>
+
+<section class="hero">
+  <h1>Mehngai sab ke liye ek jaisi nahi hoti <span class="urdu">مہنگائی سب کے لیے ایک جیسی نہیں ہوتی</span></h1>
+  <p>Government ka number sab ka average hai. <strong>Yeh tool aapka apna number nikalta hai</strong> — aap jo khareedte hain, usi ke daam se. Enter your basket below and see <em>your</em> inflation rate.</p>
+  <p class="privacy">🔒 <strong>Your basket never leaves this device.</strong> It is saved only in your browser (localStorage). Nothing you enter is sent to our server or stored in any database.</p>
+</section>
+
+<section class="section" id="basket">
+  <h2>🧺 My basket — <span class="urdu">میری ٹوکری</span></h2>
+  <p class="note">Pick an item from Pakistan's official 51-item SPI list, add how much you buy in a month, and the two prices: what you paid <strong>before</strong> and what you pay <strong>now</strong>. Your personal rate is spending-weighted: totals first, then one percentage.</p>
+
+  <div class="form-row">
+    <label>Item
+      <select id="itemSelect"><option value="">Loading items…</option></select>
+    </label>
+    <label>Quantity / month <input id="qtyInput" type="number" min="0" step="any" value="1"></label>
+    <label>Price before (Rs / unit) <input id="oldInput" type="number" min="0" step="any" placeholder="e.g. 93.17"></label>
+    <label>Price now (Rs / unit) <input id="newInput" type="number" min="0" step="any" placeholder="e.g. 125.70"></label>
+    <label>Target price — alert me (optional) <input id="targetInput" type="number" min="0" step="any" placeholder="e.g. 100"></label>
+    <button id="addBtn" class="btn">+ Add to basket</button>
+  </div>
+  <p class="note" id="pbsHint"></p>
+  <div class="btn-row">
+    <button id="exampleBtn" class="btn secondary">Load EXAMPLE basket</button>
+    <button id="clearBtn" class="btn secondary">Clear basket</button>
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th>Qty / month</th><th>Before</th><th>Now</th><th>Old cost</th><th>New cost</th><th>Change</th><th>Target alert</th><th></th></tr></thead>
+    <tbody id="basketBody"><tr><td colspan="9">Your basket is empty. Add an item above, or load the EXAMPLE basket.</td></tr></tbody>
+  </table></div>
+
+  <div class="summary" id="summaryBox">
+    <div><span>Old monthly total</span><strong id="oldTotal">Rs 0</strong></div>
+    <div><span>New monthly total</span><strong id="newTotal">Rs 0</strong></div>
+    <div><span>Difference / month</span><strong id="diffTotal">Rs 0</strong></div>
+    <div class="big"><span>YOUR personal inflation</span><strong id="pctTotal">—</strong></div>
+  </div>
+  <p class="note">This is <strong>your</strong> rate from <strong>your</strong> basket — it is not the official SPI. If your basket is mostly tomatoes, your rate jumps when tomatoes jump; the official index averages 51 items for the whole country.</p>
+
+  <h3>💾 Save &amp; compare baskets</h3>
+  <div class="form-row">
+    <label>Basket name <input id="saveName" type="text" placeholder="e.g. Ghar ka rashan"></label>
+    <label>City <select id="saveCity"><option value="">Loading cities…</option></select></label>
+    <button id="saveBtn" class="btn">Save this basket</button>
+  </div>
+  <ul id="savedList" class="saved"></ul>
+  <div class="form-row">
+    <label>Compare: first basket <select id="cmpA"><option value="">—</option></select></label>
+    <label>Compare: second basket <select id="cmpB"><option value="">—</option></select></label>
+    <button id="cmpBtn" class="btn">Compare</button>
+  </div>
+  <div id="cmpBox" class="table-wrap"></div>
+</section>
+
+<section class="section" id="spi">
+  <h2>📊 Official PBS SPI tracker — <span class="urdu">سرکاری مہنگائی</span></h2>
+  <p class="note" id="spiSource">Loading official data…</p>
+  <div class="summary" id="spiBox">
+    <div><span>Latest week ended</span><strong id="spiWeek">—</strong></div>
+    <div><span>Combined SPI (2015-16 = 100)</span><strong id="spiValue">—</strong></div>
+    <div><span>Change vs last week</span><strong id="spiWow">—</strong></div>
+    <div><span>Change vs same week last year</span><strong id="spiYoy">—</strong></div>
+  </div>
+
+  <h3>By household spending group (latest week)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Group</th><th>Monthly spending band</th><th>SPI</th><th>Week change</th><th>Year change</th></tr></thead>
+    <tbody id="quintileBody"></tbody>
+  </table></div>
+
+  <h3>🔥 Biggest weekly movers</h3>
+  <div class="two-col">
+    <div><h4>⬆️ Rising fastest</h4><ul id="moversUp"></ul></div>
+    <div><h4>⬇️ Falling fastest</h4><ul id="moversDown"></ul></div>
+  </div>
+
+  <h3>All 51 SPI items — national average prices (Rs)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th>Unit</th><th id="thNow">Now</th><th id="thPrev">Last week</th><th id="thYear">Last year</th><th>Week %</th><th>Year %</th></tr></thead>
+    <tbody id="itemsBody"></tbody>
+  </table></div>
+  <p class="note">Source: Pakistan Bureau of Statistics (PBS), weekly Sensitive Price Indicator. These are <strong>national averages across 17 cities</strong>, not your city's price and not shop prices. PBS publishes a PDF every Friday; there is no official PBS API, so new weeks are entered here by the admin from the official release.</p>
+</section>
+
+<footer>
+  <h3>Honest limits — please read</h3>
+  <ul>
+    <li><strong>Your personal rate is your own basket, NOT the official SPI.</strong> The official SPI averages 51 items with government weights; your rate uses your quantities and your prices.</li>
+    <li><strong>PBS publishes PDFs only (no official API).</strong> Weekly updates here are manual admin entries from each Friday release, so a new week appears here after the admin enters it — not automatically.</li>
+    <li><strong>Prices shown are national averages</strong> across 17 cities, not any one city's price.</li>
+    <li><strong>Alerts are in-app only.</strong> There are no SMS or WhatsApp alerts; a target flag shows on your basket when you update a price.</li>
+    <li><strong>Your basket is private:</strong> it lives only in your browser and is never sent to the server.</li>
+  </ul>
+  <p><a href="/admin.html">Admin: enter a new SPI week</a></p>
+</footer>
+
+<script src="/basket-math.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
