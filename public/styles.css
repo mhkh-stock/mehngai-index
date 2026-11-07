@@ -36,6 +36,7 @@ th { background: #f7e6c9; color: #5a2d0c; }
 .down { color: #1d7a3a; font-weight: 700; }
 .alert.above { color: #b3261e; font-weight: 700; }
 .alert.below { color: #1d7a3a; font-weight: 700; }
+.alert.at { color: #5a2d0c; font-weight: 700; }
 .saved { list-style: none; padding: 0; }
 .saved li { background: #fff; border: 1px solid #ecd9bd; border-radius: 8px; padding: 9px 12px; margin: 6px 0; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }

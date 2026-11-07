@@ -14,12 +14,16 @@ hai: aap jo khareedte hain, usi ke daam se.
    per-item change, old vs new monthly totals, the rupee difference per month,
    and your **spending-weighted personal inflation %** (totals first, then one
    percentage — a plain average of per-item percentages would over-weight
-   cheap items). A one-tap **EXAMPLE** basket (labelled EXAMPLE) is built from
-   real PBS prices. You can save several baskets (name + city) and compare any
+   cheap items). A one-tap **EXAMPLE** basket (labelled EXAMPLE on the page
+   while it is loaded) is built from real PBS prices. Adding an item that is
+   already in the basket updates its row instead of double-counting it. You
+   can save several baskets (name + city + saved date) and compare any
    two side by side.
 2. **PBS SPI tracker (official data).** Latest combined SPI, week-on-week and
    year-on-year change, the 5 household spending-group (quintile) rows, the
-   biggest weekly movers, and the full 51-item price table with three dates.
+   biggest weekly movers, the full 51-item price table with three dates, and
+   a **10-week combined-SPI trend table** (newest week first) so you can see
+   whether mehngai is speeding up or cooling down.
 3. **Item alerts (in-app only).** Set a target price on any basket item; when
    you update its current price, the basket flags it clearly: "above your
    target" / "below your target" / "at your target". No SMS, no WhatsApp.
@@ -65,14 +69,18 @@ were unchanged and chicken, eggs, flour and LPG fell. Neither number is wrong.
 - `GET /api/spi` — latest week, 10-week trend, quintiles, all 51 items with
   computed week/year %, top-5 risers and fallers, source label.
 - `GET /api/cities` — the 17 SPI cities.
+- `GET /health` — `{ ok: true, latest_week_ended, combined_spi }`.
 - `POST /api/admin/spi-week` — `{code, week_ended, combined_spi, wow_pct,
   yoy_pct, quintiles: [{label, band, spi, wow_pct, yoy_pct}], items:
   [{name, unit, price_now, price_prev_week, price_year_ago}]}`. The code must
-  equal `ADMIN_CODE` (env, default `mehngai-admin` — demo-grade, change it
-  for real use). Re-posting the same week **replaces** it (INSERT OR
+  equal `ADMIN_CODE` (env var, **required — there is no default**; the
+  server refuses to start without it, so the code is never a public value
+  in the repo). Re-posting the same week **replaces** it (INSERT OR
   REPLACE); it never duplicates a week. Previous-week prices land 7 days
   before the week, year-ago prices 364 days before, matching the PBS
-  week-ended dates.
+  week-ended dates. Blank change fields store as unknown (null), never as
+  0.00%. Posting fewer than 51 items is allowed but the admin page warns:
+  the missing items show a blank "now" price until a full week is posted.
 
 ## Admin update routine (every Friday)
 
@@ -85,9 +93,11 @@ routine — there is no feed to configure.
 ## Run it
 
 ```sh
-node server.js            # port 3032, DB data/mehngai.sqlite
-DB_FILE=/tmp/mi.sqlite node server.js   # custom DB path (SnapDeploy pattern)
-node test.js              # 22 tests, fresh throwaway DB, removed afterwards
+ADMIN_CODE=<your-private-code> node server.js   # port 3032, DB data/mehngai.sqlite
+# No default code: the server exits with FATAL if ADMIN_CODE is not set.
+# Keep the code in the environment only — never in a file, repo, or chat.
+DB_FILE=/tmp/mi.sqlite ADMIN_CODE=<your-private-code> node server.js   # custom DB path (SnapDeploy pattern)
+node test.js              # 34 tests, fresh throwaway DB, removed afterwards
 ```
 
 ## Honest limits (also in the site footer)

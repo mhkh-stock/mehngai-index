@@ -4,8 +4,11 @@
 //  * personal baskets live ONLY in the visitor's browser localStorage and are
 //    never sent to this server, never stored in the SQLite DB.
 // Node.js 24+, native node:http + node:sqlite only. No external dependencies.
-// Port 3032. Data: data/mehngai.sqlite. Admin gate is a simple shared code
-// (env ADMIN_CODE, default 'mehngai-admin') — demo-grade, documented in README.
+// Port 3032. Data: data/mehngai.sqlite. Admin gate is a shared code from env
+// ADMIN_CODE — REQUIRED, no default (fail-closed, same as the sibling
+// projects): the server refuses to start without it, so the code is never
+// a public value sitting in the repo. Set it in the environment on the
+// machine that runs the server; never put it in a file or in chat.
 'use strict';
 const http = require('node:http');
 const fs = require('node:fs');
@@ -15,8 +18,16 @@ const { DatabaseSync } = require('node:sqlite');
 const PORT = Number(process.env.PORT || 3032);
 const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'data', 'mehngai.sqlite');
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const ADMIN_CODE = process.env.ADMIN_CODE || 'mehngai-admin';
+const ADMIN_CODE = process.env.ADMIN_CODE;
+if (!ADMIN_CODE) { console.error('FATAL: ADMIN_CODE env var is required — set a private code, there is no default.'); process.exit(1); }
 const SOURCE = 'PBS SPI, week ended 29-10-2026';
+// A number field that is missing, blank, null or non-numeric stores as NULL
+// (unknown), never as 0 — 0 would falsely read as "0.00% change".
+function numOrNull(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 const db = new DatabaseSync(DB_FILE);
@@ -61,6 +72,26 @@ if (weekCount === 0) {
   for (const q of seed.quintiles_2026_10_29) upQ.run('2026-10-29', q.label, q.band, q.spi, q.wow_pct, q.yoy_pct);
   const upPrice = db.prepare('INSERT OR REPLACE INTO item_prices(item_id, week_ended, price) VALUES(?,?,?)');
   for (const it of seed.items) {
+    const id = itemId(it.name, it.unit);
+    upPrice.run(id, '2026-10-29', it.now);
+    upPrice.run(id, '2026-10-22', it.prev);
+    upPrice.run(id, '2025-10-30', it.year);
+  }
+}
+
+// ---- seed repair: a DB created from an older, shorter seed file keeps
+// serving fewer items than the seed promises (the local DB shipped with 43
+// of 51 — the last 8 seed items were never inserted, and the seed block
+// above only runs on a brand-new DB). On every start, add any seed item
+// that is missing entirely, with its three seed-week prices. Only MISSING
+// items are touched: an item already present keeps whatever prices it has,
+// so an admin correction to a seed-week price is never overwritten.
+{
+  const seed = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed-data.json'), 'utf8'));
+  const have = db.prepare('SELECT id FROM items WHERE name = ?');
+  const upPrice = db.prepare('INSERT OR REPLACE INTO item_prices(item_id, week_ended, price) VALUES(?,?,?)');
+  for (const it of seed.items) {
+    if (have.get(it.name)) continue;
     const id = itemId(it.name, it.unit);
     upPrice.run(id, '2026-10-29', it.now);
     upPrice.run(id, '2026-10-22', it.prev);
@@ -143,6 +174,10 @@ const server = http.createServer(async (req, res) => {
     const p = url.pathname;
     if (p === '/api/spi' && req.method === 'GET') return sendJson(res, 200, spiPayload());
     if (p === '/api/cities' && req.method === 'GET') return sendJson(res, 200, { cities: cities() });
+    if (p === '/health' && req.method === 'GET') {
+      const l = latestWeek();
+      return sendJson(res, 200, { ok: true, latest_week_ended: l ? l.week_ended : null, combined_spi: l ? l.combined_spi : null });
+    }
     if (p === '/api/admin/spi-week' && req.method === 'POST') {
       const body = await readBody(req);
       if (!body || body.code !== ADMIN_CODE) return sendJson(res, 403, { error: 'bad admin code' });
@@ -156,11 +191,11 @@ const server = http.createServer(async (req, res) => {
       const year = addDays(week, -364);
       // INSERT OR REPLACE = re-posting the same week replaces it, never duplicates.
       db.prepare('INSERT OR REPLACE INTO weeks(week_ended, combined_spi, wow_pct, yoy_pct) VALUES(?,?,?,?)')
-        .run(week, spi, body.wow_pct === undefined ? null : Number(body.wow_pct), body.yoy_pct === undefined ? null : Number(body.yoy_pct));
+        .run(week, spi, numOrNull(body.wow_pct), numOrNull(body.yoy_pct));
       if (Array.isArray(body.quintiles)) {
         const upQ = db.prepare('INSERT OR REPLACE INTO quintiles(week_ended, label, band, spi, wow_pct, yoy_pct) VALUES(?,?,?,?,?,?)');
         for (const q of body.quintiles) {
-          if (q && q.label) upQ.run(week, String(q.label), String(q.band || ''), q.spi === undefined ? null : Number(q.spi), q.wow_pct === undefined ? null : Number(q.wow_pct), q.yoy_pct === undefined ? null : Number(q.yoy_pct));
+          if (q && q.label) upQ.run(week, String(q.label), String(q.band || ''), numOrNull(q.spi), numOrNull(q.wow_pct), numOrNull(q.yoy_pct));
         }
       }
       let itemCount = 0;

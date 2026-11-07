@@ -5,6 +5,8 @@
   var M = window.MehngaiMath;
   var basket = []; // current working basket rows
   var spiItems = [];
+  var spiDates = { now: null, prev: null, year: null };
+  var isExample = false; // true while the loaded basket is the EXAMPLE one
   var savedKey = 'mehngai-baskets-v1';
 
   function fmt(n) {
@@ -25,6 +27,7 @@
   function renderBasket() {
     var t = M.basketTotals(basket);
     var body = $('basketBody');
+    $('exampleNote').style.display = isExample && basket.length ? '' : 'none';
     if (!basket.length) {
       body.innerHTML = '<tr><td colspan="9">Your basket is empty. Add an item above, or load the EXAMPLE basket.</td></tr>';
     } else {
@@ -42,7 +45,7 @@
           + '<td><button class="mini" data-del="' + i + '">✕</button></td></tr>';
       }).join('');
       body.querySelectorAll('[data-del]').forEach(function (b) {
-        b.onclick = function () { basket.splice(Number(b.getAttribute('data-del')), 1); renderBasket(); };
+        b.onclick = function () { basket.splice(Number(b.getAttribute('data-del')), 1); isExample = false; renderBasket(); };
       });
     }
     $('oldTotal').textContent = fmt(t.old_total);
@@ -61,11 +64,12 @@
     $('savedList').innerHTML = list.length ? list.map(function (b, i) {
       var t = M.basketTotals(b.rows);
       return '<li><strong>' + esc(b.name) + '</strong> — ' + esc(b.city || 'no city')
+        + (b.saved_at ? ' — saved ' + esc(b.saved_at) : '')
         + ' — ' + b.rows.length + ' items — ' + fmt(t.new_total) + '/month — ' + pctStr(t.pct)
         + ' <button class="mini" data-load="' + i + '">Load</button> <button class="mini" data-rm="' + i + '">Delete</button></li>';
     }).join('') : '<li>No saved baskets yet.</li>';
     $('savedList').querySelectorAll('[data-load]').forEach(function (b) {
-      b.onclick = function () { basket = JSON.parse(JSON.stringify(list[Number(b.getAttribute('data-load'))].rows)); renderBasket(); };
+      b.onclick = function () { basket = JSON.parse(JSON.stringify(list[Number(b.getAttribute('data-load'))].rows)); isExample = false; renderBasket(); };
     });
     $('savedList').querySelectorAll('[data-rm]').forEach(function (b) {
       b.onclick = function () { list.splice(Number(b.getAttribute('data-rm')), 1); storeSaved(list); renderSaved(); renderCompareSelects(); };
@@ -90,16 +94,27 @@
       alert('Enter a quantity above 0 and both prices (0 or more).'); return;
     }
     var target = $('targetInput').value === '' ? null : Number($('targetInput').value);
-    basket.push({ name: item.name, unit: item.unit, qty: qty, old_price: oldP, new_price: newP, target_price: target });
+    var row = { name: item.name, unit: item.unit, qty: qty, old_price: oldP, new_price: newP, target_price: target };
+    var existing = -1;
+    basket.forEach(function (r, i) { if (r.name === item.name) existing = i; });
+    if (existing >= 0) {
+      // Same item twice would double-count it — update the row instead.
+      basket[existing] = row;
+    } else {
+      basket.push(row);
+    }
+    isExample = false;
     $('targetInput').value = '';
     renderBasket();
   };
   $('itemSelect').onchange = function () {
     var item = spiItems[Number($('itemSelect').value)];
     if (!item) return;
-    $('pbsHint').textContent = 'PBS national average for ' + item.name + ': now ' + fmt(item.price_now)
-      + ' / last week ' + fmt(item.price_prev_week) + ' / last year ' + fmt(item.price_year_ago)
-      + ' (' + item.unit + '). You can copy these into the price boxes, or type your own shop prices.';
+    $('pbsHint').textContent = 'PBS national average for ' + item.name + ' (' + item.unit + ')'
+      + ' — now ' + fmt(item.price_now) + ' (week ended ' + (spiDates.now || '—') + ')'
+      + ' / last week ' + fmt(item.price_prev_week) + ' (' + (spiDates.prev || '—') + ')'
+      + ' / last year ' + fmt(item.price_year_ago) + ' (' + (spiDates.year || '—') + ')'
+      + '. You can copy these into the price boxes, or type your own shop prices.';
   };
   $('exampleBtn').onclick = function () {
     // EXAMPLE basket, built from real PBS prices (week ended 29-10-2026 vs
@@ -111,15 +126,16 @@
       { name: 'Milk fresh (Un-boiled)', unit: '1 litre', qty: 10, old_price: 218.92, new_price: 219.98, target_price: null },
       { name: 'Sugar Refined', unit: '1 kg', qty: 5, old_price: 141.61, new_price: 141.12, target_price: null },
     ];
+    isExample = true;
     renderBasket();
   };
-  $('clearBtn').onclick = function () { basket = []; renderBasket(); };
+  $('clearBtn').onclick = function () { basket = []; isExample = false; renderBasket(); };
   $('saveBtn').onclick = function () {
     var name = $('saveName').value.trim();
     if (!name) { alert('Give the basket a name first.'); return; }
     if (!basket.length) { alert('Your basket is empty.'); return; }
     var list = loadSaved();
-    list.push({ name: name, city: $('saveCity').value || '', rows: JSON.parse(JSON.stringify(basket)) });
+    list.push({ name: name, city: $('saveCity').value || '', saved_at: new Date().toISOString().slice(0, 10), rows: JSON.parse(JSON.stringify(basket)) });
     storeSaved(list);
     $('saveName').value = '';
     renderSaved();
@@ -149,11 +165,17 @@
       $('spiValue').textContent = d.latest.combined_spi;
       $('spiWow').textContent = pctStr(d.latest.wow_pct);
       $('spiYoy').textContent = pctStr(d.latest.yoy_pct);
+      spiDates = { now: d.latest.week_ended, prev: d.prev_week_ended, year: d.year_ago_ended };
       $('spiSource').textContent = 'Official data — source: ' + d.source + '. Base year 2015-16 = 100. 51 essential items, 50 markets, 17 cities.';
       $('thNow').textContent = 'Now (' + d.latest.week_ended + ')';
       $('thPrev').textContent = 'Last week (' + d.prev_week_ended + ')';
       $('thYear').textContent = 'Last year (' + d.year_ago_ended + ')';
     }
+    // Combined SPI trend, newest week first ('—' where a week has no change yet).
+    $('trendBody').innerHTML = (d.weeks || []).slice().reverse().map(function (w) {
+      return '<tr><td>' + esc(w.week_ended) + '</td><td>' + esc(w.combined_spi) + '</td>'
+        + '<td class="' + (w.wow_pct > 0 ? 'up' : w.wow_pct < 0 ? 'down' : '') + '">' + pctStr(w.wow_pct) + '</td></tr>';
+    }).join('');
     $('quintileBody').innerHTML = (d.quintiles || []).map(function (q) {
       return '<tr><td>' + esc(q.label) + '</td><td>' + esc(q.band) + '</td><td>' + esc(q.spi) + '</td><td>' + pctStr(q.wow_pct) + '</td><td>' + pctStr(q.yoy_pct) + '</td></tr>';
     }).join('');

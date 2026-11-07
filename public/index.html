@@ -38,6 +38,7 @@
     <button id="exampleBtn" class="btn secondary">Load EXAMPLE basket</button>
     <button id="clearBtn" class="btn secondary">Clear basket</button>
   </div>
+  <p class="warn" id="exampleNote" style="display:none">EXAMPLE basket — built from real PBS prices, week ended 29-10-2026 vs 22-10-2026. It is a demo: edit any row, add your own items, or clear it and build your own basket.</p>
 
   <div class="table-wrap"><table>
     <thead><tr><th>Item</th><th>Qty / month</th><th>Before</th><th>Now</th><th>Old cost</th><th>New cost</th><th>Change</th><th>Target alert</th><th></th></tr></thead>
@@ -77,8 +78,14 @@
     <div><span>Change vs same week last year</span><strong id="spiYoy">—</strong></div>
   </div>
 
-  <h3>By household spending group (latest week)</h3>
+  <h3>Combined SPI — last 10 weeks</h3>
   <div class="table-wrap"><table>
+    <thead><tr><th>Week ended</th><th>Combined SPI</th><th>Week change</th></tr></thead>
+    <tbody id="trendBody"></tbody>
+  </table></div>
+  <p class="note">The official index, week by week — so you can see whether mehngai is speeding up or cooling down, not just this week's number. Source: PBS weekly SPI, base year 2015-16 = 100.</p>
+
+  <h3>By household spending group (latest week)</h3>  <div class="table-wrap"><table>
     <thead><tr><th>Group</th><th>Monthly spending band</th><th>SPI</th><th>Week change</th><th>Year change</th></tr></thead>
     <tbody id="quintileBody"></tbody>
   </table></div>
