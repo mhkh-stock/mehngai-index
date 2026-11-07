@@ -109,5 +109,5 @@ node test.js              # 34 tests, fresh throwaway DB, removed afterwards
 - **No SMS/WhatsApp alerts** — target flags are in-app only.
 - **Privacy:** baskets live only in the visitor's browser (localStorage).
   They are never sent to the server and never stored in the SQLite DB.
-- The admin code is a shared demo-grade code; set a private `ADMIN_CODE`
-  before real public use.
+- The admin code is private, env-only (`ADMIN_CODE`) and fail-closed — the
+  server exits without it; there is no shared or default code.
