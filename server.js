@@ -16,7 +16,8 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
 const PORT = Number(process.env.PORT || 3032);
-const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'data', 'mehngai.sqlite');
+const { resolveDbFile } = require('./db-path.js');
+const DB_FILE = resolveDbFile({ appDir: __dirname, fileName: 'mehngai.sqlite', tmpName: 'mehngai' });
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const ADMIN_CODE = process.env.ADMIN_CODE;
 if (!ADMIN_CODE) { console.error('FATAL: ADMIN_CODE env var is required — set a private code, there is no default.'); process.exit(1); }

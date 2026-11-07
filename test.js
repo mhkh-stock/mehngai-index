@@ -60,6 +60,25 @@ async function main() {
     });
     const noCodeExit = await new Promise((r) => { noCode.on('exit', (c) => r(c)); setTimeout(() => { try { noCode.kill(); } catch {} r(null); }, 5000); });
     check('server refuses to start without ADMIN_CODE (fail-closed)', noCodeExit === 1, noCodeExit);
+    // 0a. DB fallback helper (db-path.js, FoodScope pattern): a read-only app
+    // dir falls back to /tmp/<app>, a writable one stays in data/, and
+    // DB_FILE env wins over both. isWritable is injected so the read-only
+    // case is deterministic even as root (chmod alone would not fail there).
+    const { resolveDbFile } = require('./db-path.js');
+    const os = require('node:os');
+    check('db fallback: read-only app dir -> /tmp/mehngai/mehngai.sqlite',
+      resolveDbFile({ appDir: __dirname, fileName: 'mehngai.sqlite', tmpName: 'mehngai', isWritable: () => false })
+        === path.join(os.tmpdir(), 'mehngai', 'mehngai.sqlite'));
+    check('db fallback: writable app dir -> data/mehngai.sqlite',
+      resolveDbFile({ appDir: __dirname, fileName: 'mehngai.sqlite', tmpName: 'mehngai', isWritable: () => true })
+        === path.join(__dirname, 'data', 'mehngai.sqlite'));
+    {
+      const prevDbFile = process.env.DB_FILE;
+      process.env.DB_FILE = '/tmp/custom-test.sqlite';
+      const envWins = resolveDbFile({ appDir: __dirname, fileName: 'mehngai.sqlite', tmpName: 'mehngai', isWritable: () => false }) === '/tmp/custom-test.sqlite';
+      if (prevDbFile === undefined) delete process.env.DB_FILE; else process.env.DB_FILE = prevDbFile;
+      check('db fallback: DB_FILE env wins over both', envWins);
+    }
     // 0b. Admin CSV parser: comma inside the spending band must not garble the row.
     const q = C.parseAdminLines('Q1, Up to Rs 17,732, 357.92, -0.07, 8.07\nQ2, Rs 17,733 – 22,888, 360.81, -0.25, 9.92', ['label'], 'band', ['spi', 'wow_pct', 'yoy_pct']);
     check('csv: quintile band with comma parses (Q1 band/spi/wow/yoy)',

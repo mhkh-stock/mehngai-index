@@ -97,7 +97,7 @@ ADMIN_CODE=<your-private-code> node server.js   # port 3032, DB data/mehngai.sql
 # No default code: the server exits with FATAL if ADMIN_CODE is not set.
 # Keep the code in the environment only — never in a file, repo, or chat.
 DB_FILE=/tmp/mi.sqlite ADMIN_CODE=<your-private-code> node server.js   # custom DB path (SnapDeploy pattern)
-node test.js              # 34 tests, fresh throwaway DB, removed afterwards
+node test.js              # 37 tests, fresh throwaway DB, removed afterwards
 ```
 
 ## Honest limits (also in the site footer)
